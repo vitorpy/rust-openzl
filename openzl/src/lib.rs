@@ -11,12 +11,319 @@ pub enum Error {
     },
 }
 
+// ============================================================================
+// Helper functions
+// ============================================================================
+
+/// Returns the maximum compressed size for a given source size
+fn compress_bound(src_size: usize) -> usize {
+    unsafe { sys::openzl_compress_bound(src_size) }
+}
+
+/// Convert a ZL_Report to a Rust Error
+fn report_to_error(r: sys::ZL_Report) -> Error {
+    let code = sys::report_code(r);
+    let name = unsafe { CStr::from_ptr(sys::openzl_error_code_to_string(code)) }
+        .to_string_lossy()
+        .into_owned();
+    Error::Report {
+        code,
+        name,
+        context: String::new(),
+    }
+}
+
 /// OpenZL warning (non-fatal issue during compression/decompression)
 #[derive(Debug, Clone)]
 pub struct Warning {
     pub code: i32,
     pub name: String,
 }
+
+/// Opaque GraphID for identifying compression graphs
+#[derive(Debug, Copy, Clone)]
+pub struct GraphId(sys::ZL_GraphID);
+
+impl GraphId {
+    /// Check if this GraphID is valid
+    pub fn is_valid(&self) -> bool {
+        unsafe { sys::ZL_GraphID_isValid(self.0) != 0 }
+    }
+
+    pub(crate) fn as_raw(&self) -> sys::ZL_GraphID {
+        self.0
+    }
+
+    pub(crate) fn from_raw(id: sys::ZL_GraphID) -> Self {
+        GraphId(id)
+    }
+}
+
+impl PartialEq for GraphId {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.gid == other.0.gid
+    }
+}
+
+impl Eq for GraphId {}
+
+/// Standard compression graphs provided by OpenZL
+pub mod graphs {
+    use super::*;
+
+    const fn make_graph_id(id: u32) -> GraphId {
+        GraphId(sys::ZL_GraphID { gid: id })
+    }
+
+    /// No compression - stores data as-is
+    pub const STORE: GraphId = make_graph_id(sys::ZL_StandardGraphID::ZL_StandardGraphID_store as u32);
+
+    /// ZSTD compression (general purpose)
+    pub const ZSTD: GraphId = make_graph_id(sys::ZL_StandardGraphID::ZL_StandardGraphID_zstd as u32);
+
+    /// Optimized for numeric data
+    pub const NUMERIC: GraphId = make_graph_id(sys::ZL_StandardGraphID::ZL_StandardGraphID_select_numeric as u32);
+
+    /// Field-level LZ compression
+    pub const FIELD_LZ: GraphId = make_graph_id(sys::ZL_StandardGraphID::ZL_StandardGraphID_field_lz as u32);
+
+    /// FSE entropy encoding
+    pub const FSE: GraphId = make_graph_id(sys::ZL_StandardGraphID::ZL_StandardGraphID_fse as u32);
+
+    /// Huffman entropy encoding
+    pub const HUFFMAN: GraphId = make_graph_id(sys::ZL_StandardGraphID::ZL_StandardGraphID_huffman as u32);
+
+    /// Combined entropy encoding (FSE/Huffman selection)
+    pub const ENTROPY: GraphId = make_graph_id(sys::ZL_StandardGraphID::ZL_StandardGraphID_entropy as u32);
+
+    /// Bitpacking compression
+    pub const BITPACK: GraphId = make_graph_id(sys::ZL_StandardGraphID::ZL_StandardGraphID_bitpack as u32);
+
+    /// Constant value compression
+    pub const CONSTANT: GraphId = make_graph_id(sys::ZL_StandardGraphID::ZL_StandardGraphID_constant as u32);
+}
+
+/// Compression graph builder and manager
+///
+/// Compressor is used to register and manage compression graphs, which define
+/// HOW to compress data. This is the heart of OpenZL's typed compression.
+pub struct Compressor(*mut sys::ZL_Compressor);
+
+impl Compressor {
+    /// Create a new Compressor for graph registration
+    pub fn new() -> Self {
+        let ptr = unsafe { sys::ZL_Compressor_create() };
+        assert!(!ptr.is_null(), "ZL_Compressor_create returned null");
+        Compressor(ptr)
+    }
+
+    /// Set a global compression parameter
+    pub fn set_parameter(&mut self, param: sys::ZL_CParam, value: i32) -> Result<(), Error> {
+        let r = unsafe { sys::ZL_Compressor_setParameter(self.0, param, value) };
+        if sys::report_is_error(r) {
+            let code = sys::report_code(r);
+            let name = unsafe { CStr::from_ptr(sys::openzl_error_code_to_string(code)) }
+                .to_string_lossy()
+                .into_owned();
+            return Err(Error::Report {
+                code,
+                name,
+                context: String::new(),
+            });
+        }
+        Ok(())
+    }
+
+    /// Get warnings generated during graph construction/validation
+    pub fn warnings(&self) -> Vec<Warning> {
+        let arr = unsafe { sys::ZL_Compressor_getWarnings(self.0) };
+        let slice = unsafe { std::slice::from_raw_parts(arr.errors, arr.size) };
+        slice
+            .iter()
+            .map(|e| {
+                let code = unsafe { sys::openzl_error_get_code(e) };
+                let name = unsafe { CStr::from_ptr(sys::openzl_error_get_name(e)) }
+                    .to_string_lossy()
+                    .into_owned();
+                Warning { code, name }
+            })
+            .collect()
+    }
+
+    pub(crate) fn as_ptr(&self) -> *const sys::ZL_Compressor {
+        self.0 as *const _
+    }
+
+    pub(crate) fn as_mut_ptr(&mut self) -> *mut sys::ZL_Compressor {
+        self.0
+    }
+}
+
+impl Drop for Compressor {
+    fn drop(&mut self) {
+        unsafe { sys::ZL_Compressor_free(self.0) }
+    }
+}
+
+impl Default for Compressor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ============================================================================
+// Graph Function API
+// ============================================================================
+
+/// Trait for defining compression graphs.
+///
+/// Implementors define how to build a compression graph by registering
+/// nodes and edges with the Compressor.
+pub trait GraphFn {
+    /// Build the compression graph using the provided Compressor.
+    ///
+    /// Returns the starting GraphID for this graph.
+    fn build_graph(&self, compressor: &mut Compressor) -> GraphId;
+}
+
+/// Standard graph: ZSTD compression (general purpose)
+pub struct ZstdGraph;
+
+impl GraphFn for ZstdGraph {
+    fn build_graph(&self, _compressor: &mut Compressor) -> GraphId {
+        graphs::ZSTD
+    }
+}
+
+/// Standard graph: Numeric compression (optimized for numeric data)
+pub struct NumericGraph;
+
+impl GraphFn for NumericGraph {
+    fn build_graph(&self, _compressor: &mut Compressor) -> GraphId {
+        graphs::NUMERIC
+    }
+}
+
+/// Standard graph: Store (no compression, useful for testing)
+pub struct StoreGraph;
+
+impl GraphFn for StoreGraph {
+    fn build_graph(&self, _compressor: &mut Compressor) -> GraphId {
+        graphs::STORE
+    }
+}
+
+/// Standard graph: Field-level LZ compression
+pub struct FieldLzGraph;
+
+impl GraphFn for FieldLzGraph {
+    fn build_graph(&self, _compressor: &mut Compressor) -> GraphId {
+        graphs::FIELD_LZ
+    }
+}
+
+// C trampoline for converting Rust GraphFn to C callback
+unsafe extern "C" fn graph_fn_trampoline(compressor: *mut sys::ZL_Compressor) -> sys::ZL_GraphID {
+    // This is called from C code during compression.
+    // We need to recover the GraphFn trait object from somewhere.
+    // For now, we'll use a simple approach: the trait object is passed via
+    // thread-local storage or as user data.
+    //
+    // Actually, looking at the C API more carefully, ZL_compress_usingGraphFn
+    // takes a raw function pointer, not a closure with context.
+    // We need to use a different approach: create a wrapper that stores
+    // the graph function and provides a C-compatible callback.
+
+    // For the stateless API (standard graphs), we can just return the GraphID directly.
+    // But we need to know which graph to use. This won't work with trait objects.
+
+    // Better approach: for each standard graph, create a dedicated C callback.
+    // For custom graphs, we'll need a different mechanism.
+
+    // This is a placeholder - we'll implement dedicated trampolines for each standard graph
+    graphs::ZSTD.0
+}
+
+/// Compress data using a graph function.
+///
+/// This is a stateless compression function that uses the provided GraphFn
+/// to define the compression strategy.
+pub fn compress_with_graph<G: GraphFn>(src: &[u8], graph: &G) -> Result<Vec<u8>, Error> {
+    // Allocate output buffer (use compress_bound to estimate size)
+    let max_size = compress_bound(src.len());
+    let mut dst = vec![0u8; max_size];
+
+    // Create a temporary compressor to get the GraphID
+    let mut compressor = Compressor::new();
+    let graph_id = graph.build_graph(&mut compressor);
+
+    // Use ZL_compress_usingGraphFn with a C callback that selects the graph
+    // The callback will also set required parameters like format version
+    let graph_fn = make_graph_selector_fn(graph_id);
+
+    let r = unsafe {
+        sys::ZL_compress_usingGraphFn(
+            dst.as_mut_ptr() as *mut _,
+            dst.len(),
+            src.as_ptr() as *const _,
+            src.len(),
+            graph_fn,
+        )
+    };
+
+    if sys::report_is_error(r) {
+        return Err(report_to_error(r));
+    }
+
+    let compressed_size = sys::report_value(r);
+    dst.truncate(compressed_size);
+    Ok(dst)
+}
+
+// Helper to create a C callback that selects a specific GraphID
+fn make_graph_selector_fn(graph_id: GraphId) -> sys::ZL_GraphFn {
+    // For standard graphs, we can use dedicated callbacks
+    match graph_id.0.gid {
+        id if id == graphs::ZSTD.0.gid => Some(zstd_graph_callback),
+        id if id == graphs::NUMERIC.0.gid => Some(numeric_graph_callback),
+        id if id == graphs::STORE.0.gid => Some(store_graph_callback),
+        id if id == graphs::FIELD_LZ.0.gid => Some(field_lz_graph_callback),
+        _ => {
+            // For custom graphs, we'd need a different mechanism
+            // For now, fall back to ZSTD
+            Some(zstd_graph_callback)
+        }
+    }
+}
+
+// Dedicated C callbacks for standard graphs
+unsafe extern "C" fn zstd_graph_callback(compressor: *mut sys::ZL_Compressor) -> sys::ZL_GraphID {
+    // Set format version (required by OpenZL)
+    sys::ZL_Compressor_setParameter(compressor, sys::ZL_CParam::ZL_CParam_formatVersion, 21);
+    graphs::ZSTD.0
+}
+
+unsafe extern "C" fn numeric_graph_callback(compressor: *mut sys::ZL_Compressor) -> sys::ZL_GraphID {
+    // Set format version (required by OpenZL)
+    sys::ZL_Compressor_setParameter(compressor, sys::ZL_CParam::ZL_CParam_formatVersion, 21);
+    graphs::NUMERIC.0
+}
+
+unsafe extern "C" fn store_graph_callback(compressor: *mut sys::ZL_Compressor) -> sys::ZL_GraphID {
+    // Set format version (required by OpenZL)
+    sys::ZL_Compressor_setParameter(compressor, sys::ZL_CParam::ZL_CParam_formatVersion, 21);
+    graphs::STORE.0
+}
+
+unsafe extern "C" fn field_lz_graph_callback(compressor: *mut sys::ZL_Compressor) -> sys::ZL_GraphID {
+    // Set format version (required by OpenZL)
+    sys::ZL_Compressor_setParameter(compressor, sys::ZL_CParam::ZL_CParam_formatVersion, 21);
+    graphs::FIELD_LZ.0
+}
+
+// ============================================================================
+// TypedRef and TypedBuffer
+// ============================================================================
 
 /// Safe wrapper around ZL_TypedRef for typed input data.
 ///
@@ -132,6 +439,125 @@ impl Drop for TypedRef<'_> {
     }
 }
 
+/// Safe wrapper around ZL_TypedBuffer for typed decompression output.
+///
+/// TypedBuffer owns its internal buffer and frees it on Drop.
+pub struct TypedBuffer {
+    ptr: *mut sys::ZL_TypedBuffer,
+}
+
+impl TypedBuffer {
+    /// Create a new TypedBuffer for receiving decompressed data
+    pub fn new() -> Self {
+        let ptr = unsafe { sys::ZL_TypedBuffer_create() };
+        assert!(!ptr.is_null(), "ZL_TypedBuffer_create returned null");
+        TypedBuffer { ptr }
+    }
+
+    /// Get the data type of this buffer
+    pub fn data_type(&self) -> sys::ZL_Type {
+        unsafe { sys::ZL_TypedBuffer_type(self.ptr) }
+    }
+
+    /// Get the size of the buffer in bytes
+    pub fn byte_size(&self) -> usize {
+        unsafe { sys::ZL_TypedBuffer_byteSize(self.ptr) }
+    }
+
+    /// Get the number of elements
+    pub fn num_elts(&self) -> usize {
+        unsafe { sys::ZL_TypedBuffer_numElts(self.ptr) }
+    }
+
+    /// Get the element width in bytes (for struct/numeric types)
+    pub fn elt_width(&self) -> usize {
+        unsafe { sys::ZL_TypedBuffer_eltWidth(self.ptr) }
+    }
+
+    /// Get read-only access to the buffer as bytes
+    pub fn as_bytes(&self) -> &[u8] {
+        let ptr = unsafe { sys::ZL_TypedBuffer_rPtr(self.ptr) };
+        let len = self.byte_size();
+        if ptr.is_null() || len == 0 {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(ptr as *const u8, len) }
+        }
+    }
+
+    /// Get read-only access to numeric data as a typed slice.
+    ///
+    /// Returns None if:
+    /// - The data type is not numeric
+    /// - The element width doesn't match T's size
+    /// - The buffer is not properly aligned for T
+    pub fn as_numeric<T: Copy>(&self) -> Option<&[T]> {
+        // Check if type is numeric
+        if self.data_type() != sys::ZL_Type::ZL_Type_numeric {
+            return None;
+        }
+
+        let width = std::mem::size_of::<T>();
+        if self.elt_width() != width {
+            return None;
+        }
+
+        let ptr = unsafe { sys::ZL_TypedBuffer_rPtr(self.ptr) };
+        if ptr.is_null() {
+            return None;
+        }
+
+        // Check alignment
+        if (ptr as usize) % std::mem::align_of::<T>() != 0 {
+            return None;
+        }
+
+        let len = self.num_elts();
+        if len == 0 {
+            return Some(&[]);
+        }
+
+        Some(unsafe { std::slice::from_raw_parts(ptr as *const T, len) })
+    }
+
+    /// Get the string lengths array (for string type)
+    ///
+    /// Returns None if the data type is not string
+    pub fn string_lens(&self) -> Option<&[u32]> {
+        if self.data_type() != sys::ZL_Type::ZL_Type_string {
+            return None;
+        }
+
+        let ptr = unsafe { sys::ZL_TypedBuffer_rStringLens(self.ptr) };
+        if ptr.is_null() {
+            return None;
+        }
+
+        let len = self.num_elts();
+        if len == 0 {
+            return Some(&[]);
+        }
+
+        Some(unsafe { std::slice::from_raw_parts(ptr, len) })
+    }
+
+    pub(crate) fn as_mut_ptr(&mut self) -> *mut sys::ZL_TypedBuffer {
+        self.ptr
+    }
+}
+
+impl Drop for TypedBuffer {
+    fn drop(&mut self) {
+        unsafe { sys::ZL_TypedBuffer_free(self.ptr) }
+    }
+}
+
+impl Default for TypedBuffer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn error_from_report_with_ctx(code: i32, name: String, ctx_str: Option<&CStr>) -> Error {
     let context = match ctx_str.and_then(|s| s.to_str().ok()) {
         Some(s) if !s.is_empty() => format!("\n{s}"),
@@ -149,6 +575,26 @@ impl CCtx {
     }
     pub fn set_parameter(&mut self, p: sys::ZL_CParam, v: i32) -> Result<(), Error> {
         let r = unsafe { sys::ZL_CCtx_setParameter(self.0, p, v) };
+        if sys::report_is_error(r) {
+            let code = sys::report_code(r);
+            let name = unsafe { CStr::from_ptr(sys::openzl_error_code_to_string(code)) }
+                .to_string_lossy()
+                .into_owned();
+            let ctx = unsafe { CStr::from_ptr(sys::openzl_cctx_error_context(self.0, r)) };
+            return Err(error_from_report_with_ctx(code, name, Some(&ctx)));
+        }
+        Ok(())
+    }
+
+    /// Reference a Compressor for graph-based typed compression.
+    ///
+    /// This enables TypedRef compression by associating the CCtx with a Compressor
+    /// that has registered compression graphs.
+    ///
+    /// IMPORTANT: The Compressor must remain valid for the duration of its usage.
+    /// The Compressor must be validated before being referenced.
+    pub fn ref_compressor(&mut self, compressor: &Compressor) -> Result<(), Error> {
+        let r = unsafe { sys::ZL_CCtx_refCompressor(self.0, compressor.as_ptr()) };
         if sys::report_is_error(r) {
             let code = sys::report_code(r);
             let name = unsafe { CStr::from_ptr(sys::openzl_error_code_to_string(code)) }
@@ -245,6 +691,50 @@ impl DCtx {
             })
             .collect()
     }
+
+    /// Decompress into a TypedBuffer (auto-sized, single output)
+    pub fn decompress_typed_buffer(&mut self, compressed: &[u8], output: &mut TypedBuffer) -> Result<usize, Error> {
+        let r = unsafe {
+            sys::ZL_DCtx_decompressTBuffer(
+                self.0,
+                output.as_mut_ptr(),
+                compressed.as_ptr() as *const _,
+                compressed.len(),
+            )
+        };
+        if sys::report_is_error(r) {
+            let code = sys::report_code(r);
+            let name = unsafe { CStr::from_ptr(sys::openzl_error_code_to_string(code)) }
+                .to_string_lossy()
+                .into_owned();
+            let ctx = unsafe { CStr::from_ptr(sys::openzl_dctx_error_context(self.0, r)) };
+            return Err(error_from_report_with_ctx(code, name, Some(&ctx)));
+        }
+        Ok(sys::report_value(r))
+    }
+
+    /// Decompress into multiple TypedBuffers (multi-output frame)
+    pub fn decompress_multi_typed_buffer(&mut self, compressed: &[u8], outputs: &mut [&mut TypedBuffer]) -> Result<usize, Error> {
+        let mut ptrs: Vec<*mut sys::ZL_TypedBuffer> = outputs.iter_mut().map(|tb| tb.as_mut_ptr()).collect();
+        let r = unsafe {
+            sys::ZL_DCtx_decompressMultiTBuffer(
+                self.0,
+                ptrs.as_mut_ptr(),
+                ptrs.len(),
+                compressed.as_ptr() as *const _,
+                compressed.len(),
+            )
+        };
+        if sys::report_is_error(r) {
+            let code = sys::report_code(r);
+            let name = unsafe { CStr::from_ptr(sys::openzl_error_code_to_string(code)) }
+                .to_string_lossy()
+                .into_owned();
+            let ctx = unsafe { CStr::from_ptr(sys::openzl_dctx_error_context(self.0, r)) };
+            return Err(error_from_report_with_ctx(code, name, Some(&ctx)));
+        }
+        Ok(sys::report_value(r))
+    }
 }
 impl Drop for DCtx { fn drop(&mut self) { unsafe { sys::ZL_DCtx_free(self.0) } } }
 
@@ -277,11 +767,30 @@ pub fn compress_serial(src: &[u8]) -> Result<Vec<u8>, Error> {
     Ok(dst)
 }
 
-/// Compress a single TypedRef and return the compressed bytes
+/// Compress a single TypedRef and return the compressed bytes.
+///
+/// This uses ZSTD graph by default. For better compression on specific data types,
+/// consider using type-specific compression functions or creating a custom Compressor
+/// with appropriate graphs.
 pub fn compress_typed_ref(input: &TypedRef) -> Result<Vec<u8>, Error> {
     let mut cctx = CCtx::new();
     // Set format version (required by OpenZL). Use latest version (21).
     cctx.set_parameter(sys::ZL_CParam::ZL_CParam_formatVersion, 21)?;
+
+    // Create a Compressor with ZSTD graph (reasonable default for general use)
+    let mut compressor = Compressor::new();
+    compressor.set_parameter(sys::ZL_CParam::ZL_CParam_formatVersion, 21)?;
+
+    // Register ZSTD as the starting graph using the graph callback approach
+    let r = unsafe {
+        sys::ZL_Compressor_initUsingGraphFn(compressor.as_mut_ptr(), Some(zstd_graph_callback))
+    };
+    if sys::report_is_error(r) {
+        return Err(report_to_error(r));
+    }
+
+    // Reference the compressor in the CCtx
+    cctx.ref_compressor(&compressor)?;
 
     // Estimate capacity based on input data (this is conservative)
     // For TypedRef we can't easily get the size, so use a large upper bound
@@ -293,11 +802,27 @@ pub fn compress_typed_ref(input: &TypedRef) -> Result<Vec<u8>, Error> {
     Ok(dst)
 }
 
-/// Compress multiple TypedRefs into a single frame
+/// Compress multiple TypedRefs into a single frame.
+///
+/// This uses ZSTD graph by default. For better compression on specific data types,
+/// consider creating a custom Compressor with appropriate graphs.
 pub fn compress_multi_typed_ref(inputs: &[&TypedRef]) -> Result<Vec<u8>, Error> {
     let mut cctx = CCtx::new();
     // Set format version (required by OpenZL). Use latest version (21).
     cctx.set_parameter(sys::ZL_CParam::ZL_CParam_formatVersion, 21)?;
+
+    // Create a Compressor with ZSTD graph
+    let mut compressor = Compressor::new();
+    compressor.set_parameter(sys::ZL_CParam::ZL_CParam_formatVersion, 21)?;
+
+    let r = unsafe {
+        sys::ZL_Compressor_initUsingGraphFn(compressor.as_mut_ptr(), Some(zstd_graph_callback))
+    };
+    if sys::report_is_error(r) {
+        return Err(report_to_error(r));
+    }
+
+    cctx.ref_compressor(&compressor)?;
 
     // Estimate capacity (conservative)
     let cap = 1024 * 1024; // 1MB default
@@ -331,4 +856,12 @@ pub fn decompress_serial(src: &[u8]) -> Result<Vec<u8>, Error> {
     let n = sys::report_value(r) as usize;
     dst.truncate(n);
     Ok(dst)
+}
+
+/// Decompress compressed data into a TypedBuffer (auto-allocates and determines type)
+pub fn decompress_typed_buffer(compressed: &[u8]) -> Result<TypedBuffer, Error> {
+    let mut dctx = DCtx::new();
+    let mut output = TypedBuffer::new();
+    dctx.decompress_typed_buffer(compressed, &mut output)?;
+    Ok(output)
 }

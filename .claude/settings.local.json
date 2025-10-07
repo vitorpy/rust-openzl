@@ -6,7 +6,8 @@
       "Bash(VERBOSE=1 cargo build -p openzl-sys)",
       "Bash(cargo clean:*)",
       "Bash(nm:*)",
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
