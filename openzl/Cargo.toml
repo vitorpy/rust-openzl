@@ -1,5 +1,5 @@
 [package]
-name = "openzl"
+name = "rust-openzl"
 version = "0.1.0"
 edition = "2021"
 authors = ["rust-openzl contributors"]
@@ -8,11 +8,11 @@ description = "Safe Rust bindings for OpenZL - a graph-based typed compression l
 readme = "../README.md"
 repository = "https://github.com/vitorpy/rust-openzl"
 homepage = "https://github.com/vitorpy/rust-openzl"
-documentation = "https://docs.rs/openzl"
+documentation = "https://docs.rs/rust-openzl"
 keywords = ["compression", "openzl", "numeric", "typed", "graph"]
 categories = ["compression", "encoding", "api-bindings"]
 rust-version = "1.70"
 
 [dependencies]
-openzl-sys = { path = "../openzl-sys", version = "0.1.0" }
+rust-openzl-sys = { path = "../openzl-sys", version = "0.1.0" }
 thiserror = { workspace = true }

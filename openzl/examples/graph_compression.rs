@@ -3,7 +3,7 @@
 //! OpenZL's core concept is compression graphs - they define HOW to compress data.
 //! Different graphs are optimized for different data patterns.
 
-use openzl::{compress_with_graph, decompress_serial, ZstdGraph, StoreGraph};
+use rust_openzl::{compress_with_graph, decompress_serial, ZstdGraph, StoreGraph};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Graph-Based Compression Examples ===\n");

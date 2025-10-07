@@ -3,7 +3,7 @@
 //! TypedRef allows you to compress data with type information, enabling
 //! OpenZL to apply type-specific optimizations.
 
-use openzl::{compress_typed_ref, decompress_typed_buffer, TypedRef};
+use rust_openzl::{compress_typed_ref, decompress_typed_buffer, TypedRef};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== TypedRef Compression Examples ===\n");

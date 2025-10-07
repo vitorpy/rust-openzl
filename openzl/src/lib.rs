@@ -17,39 +17,39 @@
 //! ### Serial Compression (Generic Data)
 //!
 //! ```
-//! use openzl::{compress_serial, decompress_serial};
+//! use rust_openzl::{compress_serial, decompress_serial};
 //!
 //! let data = b"Hello, OpenZL!";
 //! let compressed = compress_serial(data)?;
 //! let decompressed = decompress_serial(&compressed)?;
 //! assert_eq!(data.as_slice(), decompressed.as_slice());
-//! # Ok::<(), openzl::Error>(())
+//! # Ok::<(), rust_openzl::Error>(())
 //! ```
 //!
 //! ### Numeric Compression (Type-Optimized)
 //!
 //! ```
-//! use openzl::{compress_numeric, decompress_numeric};
+//! use rust_openzl::{compress_numeric, decompress_numeric};
 //!
 //! // Compress numeric arrays with specialized algorithms
 //! let data: Vec<u32> = (0..10000).collect();
 //! let compressed = compress_numeric(&data)?;
 //! let decompressed: Vec<u32> = decompress_numeric(&compressed)?;
 //! assert_eq!(data, decompressed);
-//! # Ok::<(), openzl::Error>(())
+//! # Ok::<(), rust_openzl::Error>(())
 //! ```
 //!
 //! ### Graph-Based Compression
 //!
 //! ```
-//! use openzl::{compress_with_graph, decompress_serial, ZstdGraph, NumericGraph};
+//! use rust_openzl::{compress_with_graph, decompress_serial, ZstdGraph, NumericGraph};
 //!
 //! let data = b"Repeated data...".repeat(100);
 //!
 //! // Use specific compression graphs
 //! let compressed = compress_with_graph(&data, &ZstdGraph)?;
 //! let decompressed = decompress_serial(&compressed)?;
-//! # Ok::<(), openzl::Error>(())
+//! # Ok::<(), rust_openzl::Error>(())
 //! ```
 //!
 //! ## Core Concepts
@@ -81,7 +81,7 @@
 //!        ↓
 //! CCtx + Compressor (graph registration)
 //!        ↓
-//! OpenZL C library (via openzl-sys)
+//! OpenZL C library (via rust-openzl-sys)
 //! ```
 //!
 //! ## Examples
@@ -112,7 +112,7 @@
 //!
 //! (Actual ratios depend on data patterns)
 
-use openzl_sys as sys;
+use rust_openzl_sys as sys;
 use std::ffi::CStr;
 
 #[derive(Debug, thiserror::Error)]
@@ -979,7 +979,7 @@ pub fn decompress_typed_buffer(compressed: &[u8]) -> Result<TypedBuffer, Error> 
 ///
 /// # Example
 /// ```no_run
-/// # use openzl::compress_numeric;
+/// # use rust_openzl::compress_numeric;
 /// let data: Vec<u32> = (0..10000).collect();
 /// let compressed = compress_numeric(&data).expect("compression failed");
 /// ```
@@ -1029,7 +1029,7 @@ pub fn compress_numeric<T: Copy>(data: &[T]) -> Result<Vec<u8>, Error> {
 ///
 /// # Example
 /// ```no_run
-/// # use openzl::{compress_numeric, decompress_numeric};
+/// # use rust_openzl::{compress_numeric, decompress_numeric};
 /// let data: Vec<u32> = (0..10000).collect();
 /// let compressed = compress_numeric(&data).expect("compression failed");
 /// let decompressed: Vec<u32> = decompress_numeric(&compressed).expect("decompression failed");

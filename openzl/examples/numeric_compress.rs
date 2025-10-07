@@ -3,7 +3,7 @@
 //! OpenZL's NUMERIC graph provides optimized compression for numeric data
 //! by exploiting patterns in numeric sequences (deltas, bitpacking, etc.).
 
-use openzl::{compress_numeric, decompress_numeric};
+use rust_openzl::{compress_numeric, decompress_numeric};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Numeric Compression Examples ===\n");

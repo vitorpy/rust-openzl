@@ -2,7 +2,7 @@
 //!
 //! This demonstrates the basic usage of OpenZL for generic byte data.
 
-use openzl::{compress_serial, decompress_serial};
+use rust_openzl::{compress_serial, decompress_serial};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Original data

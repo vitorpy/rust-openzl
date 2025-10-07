@@ -1,6 +1,6 @@
 //! Smoke tests for basic compress/decompress round-trips
 
-use openzl::{
+use rust_openzl::{
     compress_serial, decompress_serial,
     compress_typed_ref, decompress_typed_buffer,
     compress_with_graph, compress_numeric, decompress_numeric,
@@ -63,7 +63,7 @@ fn rt_typed_numeric_u32() {
     let tbuf = decompress_typed_buffer(&compressed).expect("decompress numeric");
 
     // Verify type
-    assert_eq!(tbuf.data_type(), openzl_sys::ZL_Type::ZL_Type_numeric);
+    assert_eq!(tbuf.data_type(), rust_openzl_sys::ZL_Type::ZL_Type_numeric);
     assert_eq!(tbuf.elt_width(), 4);
     assert_eq!(tbuf.num_elts(), 1000);
 
@@ -80,7 +80,7 @@ fn rt_typed_numeric_u64() {
     let compressed = compress_typed_ref(&tref).expect("compress numeric");
     let tbuf = decompress_typed_buffer(&compressed).expect("decompress numeric");
 
-    assert_eq!(tbuf.data_type(), openzl_sys::ZL_Type::ZL_Type_numeric);
+    assert_eq!(tbuf.data_type(), rust_openzl_sys::ZL_Type::ZL_Type_numeric);
     assert_eq!(tbuf.elt_width(), 8);
 
     let decompressed = tbuf.as_numeric::<u64>().expect("get numeric data");
@@ -95,7 +95,7 @@ fn rt_typed_serial() {
     let compressed = compress_typed_ref(&tref).expect("compress serial TypedRef");
     let tbuf = decompress_typed_buffer(&compressed).expect("decompress serial");
 
-    assert_eq!(tbuf.data_type(), openzl_sys::ZL_Type::ZL_Type_serial);
+    assert_eq!(tbuf.data_type(), rust_openzl_sys::ZL_Type::ZL_Type_serial);
     assert_eq!(tbuf.as_bytes(), data);
 }
 
@@ -114,7 +114,7 @@ fn rt_typed_strings() {
     let compressed = compress_typed_ref(&tref).expect("compress strings");
     let tbuf = decompress_typed_buffer(&compressed).expect("decompress strings");
 
-    assert_eq!(tbuf.data_type(), openzl_sys::ZL_Type::ZL_Type_string);
+    assert_eq!(tbuf.data_type(), rust_openzl_sys::ZL_Type::ZL_Type_string);
     assert_eq!(tbuf.as_bytes(), flat.as_slice());
     assert_eq!(tbuf.string_lens().expect("get string lens"), lens.as_slice());
 }

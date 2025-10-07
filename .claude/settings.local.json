@@ -14,7 +14,9 @@
       "Bash(cargo doc:*)",
       "Bash(cargo publish:*)",
       "Bash(find:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(git rm:*)",
+      "Bash(cargo search:*)"
     ],
     "deny": [],
     "ask": []

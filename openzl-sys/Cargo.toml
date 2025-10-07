@@ -1,5 +1,5 @@
 [package]
-name = "openzl-sys"
+name = "rust-openzl-sys"
 version = "0.1.0"
 edition = "2021"
 authors = ["rust-openzl contributors"]
@@ -9,7 +9,7 @@ description = "Low-level FFI bindings for OpenZL (vendored C library)"
 readme = "../README.md"
 repository = "https://github.com/vitorpy/rust-openzl"
 homepage = "https://github.com/vitorpy/rust-openzl"
-documentation = "https://docs.rs/openzl-sys"
+documentation = "https://docs.rs/rust-openzl-sys"
 keywords = ["compression", "openzl", "ffi", "bindings"]
 categories = ["compression", "external-ffi-bindings"]
 rust-version = "1.70"
@@ -18,11 +18,6 @@ include = [
     "src/**/*",
     "vendor/**/*",
     "Cargo.toml",
-]
-exclude = [
-    "vendor/openzl/doc/mkdocs/src",  # Symlink loop
-    "vendor/openzl/.git*",  # Git metadata
-    "vendor/openzl/**/.git*",  # Submodule git metadata
 ]
 
 [build-dependencies]
