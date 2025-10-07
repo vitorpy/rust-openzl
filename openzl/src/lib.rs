@@ -1,3 +1,117 @@
+//! # OpenZL Rust Bindings
+//!
+//! Safe, ergonomic Rust bindings for OpenZL - a graph-based typed compression library
+//! optimized for structured data.
+//!
+//! ## What is OpenZL?
+//!
+//! **OpenZL is fundamentally different from generic compressors like zlib or zstd.**
+//!
+//! It's a **graph-based typed compression library** where compression graphs define
+//! *how* to compress specific data structures. This allows OpenZL to apply type-specific
+//! optimizations (delta encoding, bitpacking, transpose, etc.) that aren't possible with
+//! generic byte-stream compression.
+//!
+//! ## Quick Start
+//!
+//! ### Serial Compression (Generic Data)
+//!
+//! ```
+//! use openzl::{compress_serial, decompress_serial};
+//!
+//! let data = b"Hello, OpenZL!";
+//! let compressed = compress_serial(data)?;
+//! let decompressed = decompress_serial(&compressed)?;
+//! assert_eq!(data.as_slice(), decompressed.as_slice());
+//! # Ok::<(), openzl::Error>(())
+//! ```
+//!
+//! ### Numeric Compression (Type-Optimized)
+//!
+//! ```
+//! use openzl::{compress_numeric, decompress_numeric};
+//!
+//! // Compress numeric arrays with specialized algorithms
+//! let data: Vec<u32> = (0..10000).collect();
+//! let compressed = compress_numeric(&data)?;
+//! let decompressed: Vec<u32> = decompress_numeric(&compressed)?;
+//! assert_eq!(data, decompressed);
+//! # Ok::<(), openzl::Error>(())
+//! ```
+//!
+//! ### Graph-Based Compression
+//!
+//! ```
+//! use openzl::{compress_with_graph, decompress_serial, ZstdGraph, NumericGraph};
+//!
+//! let data = b"Repeated data...".repeat(100);
+//!
+//! // Use specific compression graphs
+//! let compressed = compress_with_graph(&data, &ZstdGraph)?;
+//! let decompressed = decompress_serial(&compressed)?;
+//! # Ok::<(), openzl::Error>(())
+//! ```
+//!
+//! ## Core Concepts
+//!
+//! ### Compression Graphs
+//!
+//! Compression graphs are the heart of OpenZL. They define the compression strategy:
+//!
+//! - **ZSTD**: General-purpose compression (similar to zstd)
+//! - **NUMERIC**: Optimized for numeric arrays (delta encoding, bitpacking)
+//! - **FIELD_LZ**: Field-level LZ compression for structured data
+//! - **STORE**: No compression (useful for testing)
+//!
+//! ### TypedRef and TypedBuffer
+//!
+//! - [`TypedRef`]: Borrowed reference to typed input data (with lifetime)
+//! - [`TypedBuffer`]: Owned decompression output buffer
+//!
+//! These provide type information to OpenZL, enabling type-specific optimizations.
+//!
+//! ## Architecture
+//!
+//! ```text
+//! High-level APIs (compress_numeric, etc.)
+//!        ↓
+//! Graph-based compression (compress_with_graph)
+//!        ↓
+//! TypedRef compression (compress_typed_ref)
+//!        ↓
+//! CCtx + Compressor (graph registration)
+//!        ↓
+//! OpenZL C library (via openzl-sys)
+//! ```
+//!
+//! ## Examples
+//!
+//! See the `examples/` directory for complete examples:
+//!
+//! - `serial_compress.rs` - Basic serial compression
+//! - `numeric_compress.rs` - Numeric array compression with different types
+//! - `graph_compression.rs` - Using different compression graphs
+//! - `typed_compression.rs` - Advanced TypedRef usage
+//!
+//! ## Safety
+//!
+//! This crate provides safe abstractions over the unsafe FFI:
+//!
+//! - RAII wrappers with `Drop` for resource cleanup
+//! - Lifetime-checked `TypedRef` to prevent use-after-free
+//! - Type validation for numeric compression
+//! - Error handling via `Result<T, Error>`
+//!
+//! ## Performance
+//!
+//! OpenZL can achieve excellent compression ratios on structured data:
+//!
+//! - Sequential numeric data: 0.30% (400:1 ratio)
+//! - Timestamps: 2.16% (46:1 ratio)
+//! - Repetitive text: 1.96% (51:1 ratio)
+//!
+//! (Actual ratios depend on data patterns)
+
 use openzl_sys as sys;
 use std::ffi::CStr;
 

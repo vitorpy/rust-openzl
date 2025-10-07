@@ -2,8 +2,17 @@
 name = "openzl"
 version = "0.1.0"
 edition = "2021"
+authors = ["rust-openzl contributors"]
 license = "MIT OR Apache-2.0"
+description = "Safe Rust bindings for OpenZL - a graph-based typed compression library"
+readme = "../README.md"
+repository = "https://github.com/yourusername/rust-openzl"
+homepage = "https://github.com/yourusername/rust-openzl"
+documentation = "https://docs.rs/openzl"
+keywords = ["compression", "openzl", "numeric", "typed", "graph"]
+categories = ["compression", "encoding", "api-bindings"]
+rust-version = "1.70"
 
 [dependencies]
-openzl-sys = { path = "../openzl-sys" }
+openzl-sys = { path = "../openzl-sys", version = "0.1.0" }
 thiserror = { workspace = true }
