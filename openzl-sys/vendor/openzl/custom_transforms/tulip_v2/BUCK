@@ -1,0 +1,41 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("data_compression")
+
+cpp_library(
+    # @autodeps-skip
+    name = "tulip_v2",
+    srcs = [
+        "decode_tulip_v2.cpp",
+        "encode_tulip_v2.cpp",
+    ],
+    headers = [
+        "decode_tulip_v2.h",
+        "encode_tulip_v2.h",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/custom_transforms/thrift/kernels:decode_thrift_binding",
+        "//data_compression/experimental/zstrong/custom_transforms/thrift/kernels:encode_thrift_binding",
+        "//folly:range",
+        "//folly:scope_guard",
+        "//folly/io:iobuf",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+)
+
+cpp_binary(
+    # @autodeps-skip
+    name = "main",
+    srcs = ["main.cpp"],
+    deps = [
+        ":tulip_v2",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/tools:zstrong_cpp",
+        "//folly:file_util",
+        "//folly/init:init",
+    ],
+)

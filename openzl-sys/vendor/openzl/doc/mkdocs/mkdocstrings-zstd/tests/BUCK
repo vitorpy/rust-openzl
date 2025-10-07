@@ -1,0 +1,47 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_pytest.bzl", "python_pytest")
+
+oncall("data_compression")
+
+buck_filegroup(
+    name = "src",
+    srcs = glob([
+        "src/**/*.h",
+        "src/**/*.hpp",
+    ]),
+)
+
+python_library(
+    name = "helpers",
+    srcs = ["helpers.py"],
+    resources = {
+        "//data_compression/experimental/zstrong/doc/mkdocs/mkdocstrings-zstd/src:templates": "",
+        ":src": "",
+    },
+    deps = [
+        "fbsource//third-party/pypi/markdown:markdown",
+        "fbsource//third-party/pypi/mkdocs:mkdocs",
+        "fbsource//third-party/pypi/mkdocstrings:mkdocstrings",
+        "fbsource//third-party/pypi/pytest:pytest",
+        "//data_compression/experimental/zstrong/doc/mkdocs/mkdocstrings-zstd/src:mkdocstrings-zstd",
+    ],
+)
+
+python_pytest(
+    name = "test_mkdocstrings_zstd",
+    srcs = [
+        "conftest.py",
+        "test_doxygen.py",
+        "test_handler.py",
+    ],
+    deps = [
+        "fbsource//third-party/pypi/markdown:markdown",
+        "fbsource//third-party/pypi/mkdocs:mkdocs",
+        "fbsource//third-party/pypi/mkdocs-material:mkdocs-material",  # @manual
+        "fbsource//third-party/pypi/mkdocstrings:mkdocstrings",
+        "fbsource//third-party/pypi/pytest:pytest",
+        ":helpers",
+        "//data_compression/experimental/zstrong/doc/mkdocs/mkdocstrings-zstd/src:mkdocstrings-zstd",
+    ],
+)

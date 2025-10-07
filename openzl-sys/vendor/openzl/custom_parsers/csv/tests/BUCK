@@ -1,0 +1,28 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_fuzzers", "zs_unittest")
+
+oncall("data_compression")
+
+zs_unittest(
+    name = "test",
+    srcs = ["lex_test.cpp"],
+    deps = [
+        "//data_compression/experimental/zstrong/custom_parsers/csv:csv_parser",
+    ],
+)
+
+zs_fuzzers(
+    srcs = [
+        "CsvLexerFuzzer.cpp",
+    ],
+    ftest_names = [
+        ("CsvLexerTest", "RandomInputFuzzer"),
+    ],
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/custom_parsers/csv:csv_parser",
+        "//data_compression/experimental/zstrong/tests/datagen:datagen",
+    ],
+)

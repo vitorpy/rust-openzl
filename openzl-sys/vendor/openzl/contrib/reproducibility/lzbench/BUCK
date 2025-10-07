@@ -1,0 +1,10 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+
+oncall("data_compression")
+
+cpp_binary(
+    name = "analysis",
+    srcs = [
+        "analysis.cpp",
+    ],
+)

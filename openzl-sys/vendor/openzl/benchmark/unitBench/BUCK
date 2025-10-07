@@ -1,0 +1,56 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_binary", "zs_library", "zs_release_binary")
+
+oncall("data_compression")
+
+zs_binary(
+    name = "bench_input_gen",
+    srcs = [
+        "tools/input_gen.cpp",
+    ],
+)
+
+zs_library(
+    name = "sao_graph",
+    srcs = ["saoGraph.c"],
+    headers = ["saoGraph.h"],
+    deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+    ],
+)
+
+zs_binary(
+    name = "unitBench",
+    srcs = glob([
+        "**/*.c",
+    ]),
+    headers = glob([
+        "**/*.h",
+    ]),
+    deps = [
+        ":sao_graph",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/tools:fileio",
+        "//data_compression/experimental/zstrong/tools:timefn",
+        "//data_compression/experimental/zstrong/tools/streamdump:stream_dump2_headers",
+    ],
+)
+
+zs_release_binary(
+    name = "unitBench_mc",
+    srcs = glob([
+        "**/*.c",
+    ]),
+    headers = glob([
+        "**/*.h",
+    ]),
+    deps = [
+        ":sao_graph",
+        "//common/managed_compression/zstrong:stream_dump_shim",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/tools:fileio",
+        "//data_compression/experimental/zstrong/tools:timefn",
+        "//data_compression/experimental/zstrong/tools/streamdump:stream_dump2_headers",
+    ],
+)

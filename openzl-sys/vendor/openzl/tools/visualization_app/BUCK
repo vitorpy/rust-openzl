@@ -1,0 +1,50 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup", "buck_genrule", "buck_sh_binary", "buck_sh_test")
+
+oncall("data_compression")
+
+buck_filegroup(
+    name = "app_srcs",
+    srcs = glob(["**/*"]),
+)
+
+buck_genrule(
+    name = "yarn-build",
+    out = "yarn-build.sh",
+    cmd = (
+        "echo -e {0} > $OUT && chmod +x $OUT"
+            .format(shell.quote("\n".join([
+            "#!/bin/sh",
+            "pushd \\$(hg root)/fbcode/data_compression/experimental/zstrong/tools/visualization_app",
+            "yarn build",
+            "popd",
+        ])))
+    ),
+)
+
+buck_sh_binary(
+    name = "visualization-app-build",
+    main = ":yarn-build",
+)
+
+buck_genrule(
+    name = "yarn-test",
+    out = "yarn-test.sh",
+    cmd = (
+        "echo -e {0} > $OUT && chmod +x $OUT"
+            .format(shell.quote("\n".join([
+            "#!/bin/sh",
+            "cd \\$(dirname \\$0)",
+            "cd \\$(hg root)/fbcode/data_compression/experimental/zstrong/tools/visualization_app",
+            "yarn install",
+            "yarn test:run",
+        ])))
+    ),
+)
+
+buck_sh_test(
+    name = "visualization-app-tests",
+    test = ":yarn-test",
+)

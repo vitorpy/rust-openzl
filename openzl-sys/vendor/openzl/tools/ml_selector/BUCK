@@ -1,0 +1,26 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_library")
+
+oncall("data_compression")
+
+zs_library(
+    name = "ml_selector_graph",
+    srcs = ["ml_selector_graph.c"],
+    headers = ["ml_selector_graph.h"],
+    deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+    ],
+)
+
+cpp_unittest(
+    name = "test_ml_selector_graph",
+    srcs = ["test_mlSelectorGraph.cpp"],
+    deps = [
+        ":ml_selector_graph",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/tests:utils",
+    ],
+)

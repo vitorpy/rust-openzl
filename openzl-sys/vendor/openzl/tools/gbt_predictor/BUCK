@@ -1,0 +1,17 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_cxxlibrary")
+
+oncall("data_compression")
+
+zs_cxxlibrary(
+    name = "zstrong_gbt_predictor",
+    srcs = ["zstrong_gbt_predictor.cpp"],
+    headers = ["zstrong_gbt_predictor.h"],
+    compiler_flags = ["-Wno-float-equal"],
+    strict_conversions = False,
+    deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//folly:dynamic",
+    ],
+)

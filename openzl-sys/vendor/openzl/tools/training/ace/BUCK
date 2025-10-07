@@ -1,0 +1,40 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("data_compression")
+
+cpp_library(
+    # @autodeps-skip
+    name = "automated_compressor_explorer",
+    srcs = [
+        "ace.cpp",
+        "ace_compressor.cpp",
+        "ace_compressors.cpp",
+        "ace_utils.cpp",
+        "automated_compressor_explorer.cpp",
+    ],
+    headers = [
+        "ace.h",
+        "ace_compressor.h",
+        "ace_compressors.h",
+        "ace_crossover.h",
+        "ace_mutate.h",
+        "ace_sampling.h",
+        "ace_utils.h",
+        "automated_compressor_explorer.h",
+    ],
+    deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/custom_parsers:custom_parsers",
+        "//data_compression/experimental/zstrong/tools:logger",
+        "//data_compression/experimental/zstrong/tools/training:train_common",
+        "//data_compression/experimental/zstrong/tools/training/graph_mutation:graph_mutation",
+        "//data_compression/experimental/zstrong/tools/training/sample_collection:sample_collection",
+        "//data_compression/experimental/zstrong/tools/training/utils:genetic_algorithm",
+        "//data_compression/experimental/zstrong/tools/training/utils:training_utils",
+    ],
+)

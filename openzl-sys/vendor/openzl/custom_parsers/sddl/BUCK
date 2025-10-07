@@ -1,0 +1,23 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_library")
+
+oncall("data_compression")
+
+zs_library(
+    name = "profile",
+    srcs = glob([
+        "*.c",
+        "*.cpp",
+    ]),
+    headers = glob([
+        "*.h",
+    ]),
+    deps = [
+        "//data_compression/experimental/zstrong/custom_parsers/shared_components:clustering",
+        "//data_compression/experimental/zstrong/tools/sddl/compiler:lib",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+    ],
+)

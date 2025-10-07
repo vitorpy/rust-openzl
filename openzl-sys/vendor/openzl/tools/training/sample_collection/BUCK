@@ -1,0 +1,25 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_cxxlibrary")
+
+oncall("data_compression")
+
+zs_cxxlibrary(
+    name = "sample_collection",
+    srcs = [
+        "introspection_hooks.cpp",
+        "training_sample_collector.cpp",
+    ],
+    headers = [
+        "introspection_hooks.h",
+        "training_sample_collector.h",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:common",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/tools:io",
+        "//data_compression/experimental/zstrong/tools:logger",
+        "//data_compression/experimental/zstrong/tools/training/utils:training_utils",
+    ],
+)

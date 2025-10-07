@@ -1,0 +1,75 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+# @noautodeps
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("//data_compression/experimental/zstrong:defs.bzl", "ZS_HEADER_INCLUDE_PATH", "zs_fuzzers")
+
+oncall("data_compression")
+
+cpp_unittest(
+    name = "thrift_test",
+    srcs = glob(["test_*.cpp"]),
+    headers = glob(["test_*.h"]),
+    compiler_flags = [ZS_HEADER_INCLUDE_PATH],
+    deps = [
+        ":thrift_test_utils",
+        "//data_compression/experimental/zstrong/custom_transforms/tulip_v2/tests:tulip_v2_data_utils",
+    ],
+)
+
+cpp_library(
+    name = "thrift_test_utils",
+    srcs = [
+        "test_prob_selector_fixture.cpp",
+        "util.cpp",
+    ],
+    headers = [
+        "test_prob_selector_fixture.h",
+        "util.h",
+    ],
+    compiler_flags = [ZS_HEADER_INCLUDE_PATH],
+    exported_deps = [
+        ":thrift_test_schema-cpp2-reflection",
+        ":thrift_test_schema-cpp2-types",
+        ":thrift_test_schema-cpp2-visitation",
+        "//common/gtest:gtest",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/custom_transforms/thrift:thrift_lib",
+        "//data_compression/experimental/zstrong/custom_transforms/thrift/kernels/tests:thrift_kernel_test_utils",
+        "//data_compression/experimental/zstrong/tests/datagen:datagen",
+        "//data_compression/experimental/zstrong/tools:zstrong_cpp",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+)
+
+thrift_library(
+    name = "thrift_test_schema",
+    languages = [
+        "cpp2",
+    ],
+    thrift_cpp2_options = "reflection",
+    thrift_srcs = {
+        "test_schema.thrift": [],
+    },
+    deps = [],
+)
+
+zs_fuzzers(
+    srcs = ["fuzz.cpp"],
+    ftest_names = [
+        ("ThriftCompactTest", "FuzzRoundTrip"),
+        ("ThriftCompactTest", "FuzzCompress"),
+        ("ThriftCompactTest", "FuzzDecompress"),
+        ("ThriftBinaryTest", "FuzzRoundTrip"),
+        ("ThriftBinaryTest", "FuzzCompress"),
+        ("ThriftBinaryTest", "FuzzDecompress"),
+        ("ProbSelectorTest", "FuzzRoundTrip"),
+    ],
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        ":thrift_test_utils",
+        "//data_compression/experimental/zstrong/tests:fuzz_utils",
+    ],
+)

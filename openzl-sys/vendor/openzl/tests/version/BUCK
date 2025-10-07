@@ -1,0 +1,80 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load(":defs.bzl", "dev_only_unittest", "version_fuzzer")
+# @noautodeps
+
+oncall("data_compression")
+
+cpp_binary(
+    name = "version_test_interface.so",
+    srcs = ["VersionTestInterfaceABI.cpp"],
+    headers = ["VersionTestInterfaceABI.h"],
+    dlopen_enabled = True,
+    deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/tests:constants",
+        "//data_compression/experimental/zstrong/tests/datagen:custom_nodes",
+    ],
+)
+
+# NOTE: This cannot depend on ZStrong at all!
+# Doing so will break the version test. Be very careful about adding external
+# dependencies, because they could pull in ZStrong. It must interact with ZStrong
+# through version_test_interface.so.
+cpp_library(
+    name = "version_test_interface",
+    srcs = ["VersionTestInterface.cpp"],
+    headers = [
+        "VersionTestInterface.h",
+        "VersionTestInterfaceABI.h",
+    ],
+    external_deps = [
+        "gflags",
+    ],
+)
+
+# NOTE: This cannot depend on ZStrong at all!
+# Doing so will break the version test. Be very careful about adding external
+# dependencies, because they could pull in ZStrong. It must interact with ZStrong
+# through version_test_interface.so.
+dev_only_unittest(
+    name = "version_test",
+    srcs = ["VersionTest.cpp"],
+    resources = {
+        "dev_version_test_interface.so": ":version_test_interface.so",
+        "release_version_test_interface.so": "//openzl:release_version_test_interface.so",
+    },
+    supports_static_listing = False,
+    deps = [
+        "fbsource//xplat/tools/cxx:resourcesFbcode",
+        ":version_test_interface",
+        "//data_compression/experimental/zstrong/custom_transforms/thrift/kernels/tests:thrift_kernel_test_utils",
+    ],
+)
+
+# See the defs.bzl for the magic of how we set this up.
+version_fuzzer(
+    name = "ZStrong_VersionTest_FuzzNodeForwardCompatible",
+)
+
+version_fuzzer(
+    name = "ZStrong_VersionTest_FuzzNodeBackwardCompatible",
+)
+
+version_fuzzer(
+    name = "ZStrong_VersionTest_FuzzGraphForwardCompatible",
+)
+
+version_fuzzer(
+    name = "ZStrong_VersionTest_FuzzGraphBackwardCompatible",
+)
+
+version_fuzzer(
+    name = "ZStrong_VersionTest_FuzzRandomGraphFowardCompatible",
+)
+
+version_fuzzer(
+    name = "ZStrong_VersionTest_FuzzRandomGraphBackwardCompatible",
+)

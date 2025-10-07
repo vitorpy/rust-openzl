@@ -1,0 +1,46 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+# @noautodeps
+
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_fuzzers")
+
+oncall("data_compression")
+
+cpp_library(
+    name = "parse_test_data",
+    headers = ["parse_test_data.h"],
+    deps = [
+        "//folly:conv",
+    ],
+)
+
+cpp_unittest(
+    name = "test_parse",
+    srcs = ["test_parse.cpp"],
+    deps = [
+        ":parse_test_data",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/custom_transforms/parse:parse",
+        "//data_compression/experimental/zstrong/tools:zstrong_cpp",
+        "//folly:conv",
+    ],
+)
+
+zs_fuzzers(
+    srcs = ["fuzz_parse.cpp"],
+    ftest_names = [
+        ("ParseTest", "FuzzInt64RoundTrip"),
+        ("ParseTest", "FuzzInt64Decompress"),
+        ("ParseTest", "FuzzFloat64RoundTrip"),
+        ("ParseTest", "FuzzFloat64Decompress"),
+    ],
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        ":parse_test_data",
+        "//data_compression/experimental/zstrong/custom_transforms/parse:parse",
+        "//data_compression/experimental/zstrong/tests:fuzz_utils",
+        "//data_compression/experimental/zstrong/tools:zstrong_cpp",
+    ],
+)

@@ -1,0 +1,40 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_cxxlibrary")
+
+oncall("data_compression")
+
+zs_cxxlibrary(
+    name = "train",
+    srcs =
+        [
+            "train.cpp",
+        ],
+    headers =
+        [
+            "train.h",
+        ],
+    deps = [
+        "//data_compression/experimental/zstrong/custom_parsers:custom_parsers",
+        "//data_compression/experimental/zstrong/tools/training/ace:automated_compressor_explorer",
+        "//data_compression/experimental/zstrong/tools/training/clustering:clustering_graph_trainer",
+        "//data_compression/experimental/zstrong/tools/training/graph_mutation:graph_mutation",
+    ],
+    exported_deps = [
+        ":train_common",
+        "//data_compression/experimental/zstrong/tools:logger",
+        "//data_compression/experimental/zstrong/tools/training/utils:training_utils",
+    ],
+)
+
+# TODO: Clean up the BUCK rules in this directory
+zs_cxxlibrary(
+    name = "train_common",
+    headers =
+        [
+            "train_params.h",
+        ],
+    deps = [
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+    ],
+)

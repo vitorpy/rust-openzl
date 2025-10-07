@@ -1,0 +1,27 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("data_compression")
+
+python_binary(
+    name = "quick_start",
+    srcs = ["quick_start.py"],
+    labels = ["autodeps2_generated"],
+    main_module = "data_compression.experimental.zstrong.examples.py.quick_start",
+    deps = [
+        "fbsource//third-party/pypi/numpy:numpy",
+        "//data_compression/experimental/zstrong/py:openzl",
+    ],
+)
+
+python_binary(
+    name = "parsing",
+    srcs = ["parsing.py"],
+    labels = ["autodeps2_generated"],
+    main_module = "data_compression.experimental.zstrong.examples.py.parsing",
+    deps = [
+        "fbsource//third-party/pypi/numpy:numpy",
+        "//data_compression/experimental/zstrong/py:openzl",
+    ],
+)

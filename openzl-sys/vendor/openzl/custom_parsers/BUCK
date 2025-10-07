@@ -1,0 +1,60 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_library")
+
+oncall("data_compression")
+
+zs_library(
+    name = "custom_parsers",
+    srcs = [
+        "dependency_registration.cpp",
+    ],
+    headers = [
+        "dependency_registration.h",
+    ],
+    deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/custom_parsers/csv:csv_parser",
+        "//data_compression/experimental/zstrong/custom_parsers/parquet:parquet_graph",
+        "//data_compression/experimental/zstrong/custom_parsers/shared_components:clustering",
+    ],
+)
+
+cpp_library(
+    # @autodeps-skip
+    name = "zip_lexer",
+    srcs = ["zip_lexer.c"],
+    headers = ["zip_lexer.h"],
+    deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+    ],
+)
+
+cpp_library(
+    # @autodeps-skip
+    name = "pytorch_model_parser",
+    srcs = ["pytorch_model_parser.c"],
+    headers = ["pytorch_model_parser.h"],
+    deps = [
+        ":zip_lexer",
+        "//data_compression/experimental/zstrong:zstronglib",
+    ],
+)
+
+cpp_binary(
+    # @autodeps-skip
+    name = "pytorch_model_compressor",
+    srcs = [
+        "pytorch_model_compressor.cpp",
+    ],
+    deps = [
+        ":pytorch_model_parser",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/tools:zstrong_cpp",
+        "//folly:file_util",
+        "//folly/init:init",
+    ],
+)

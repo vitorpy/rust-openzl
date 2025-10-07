@@ -1,0 +1,74 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup", "buck_genrule", "buck_sh_test")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("data_compression")
+
+python_binary(
+    name = "static_docs_build_script",
+    srcs = ["static_docs_build_script.py"],
+    main_module = "data_compression.experimental.zstrong.doc.mkdocs.static_docs_build_script",
+    par_style = "xar",
+    resources = {
+        ":mkdocs": "mkdocs",
+    },
+)
+
+buck_filegroup(
+    name = "doc_srcs",
+    srcs = glob(["doc/**/*"]),
+)
+
+buck_genrule(
+    name = "static_docs",
+    out = "static_docs.sh",
+    cmd = (
+        "echo -e {0} > $OUT && chmod +x $OUT"
+            .format(shell.quote("\n".join([
+            "#!/bin/bash",
+            "SCRIPT=\\$(readlink -f $0)",
+            "SCRIPTPATH=\\$(dirname $SCRIPT)",
+            "cd $SCRIPTPATH",
+            "$(location :static_docs_build_script) --pwd \\$(hg root)/fbcode/data_compression/experimental/zstrong/doc/mkdocs --use-system-python-extension --test",
+        ])))
+    ),
+)
+
+# Test the internal website builds successfully
+buck_sh_test(
+    name = "static_docs_test",
+    test = ":static_docs",
+    deps = [
+        ":static_docs_build_script",
+        # Depend on all files under doc/ to ensure the test triggers on changes to the docs
+        ":doc_srcs",
+        # Inject fake dependencies to ensure the test triggers on changes to the library and visualization app
+        "//data_compression/experimental/zstrong:zstronglib",  # @manual
+        "//data_compression/experimental/zstrong/tools/visualization_app:app_srcs",  # @manual
+    ],
+)
+
+python_binary(
+    name = "mkdocs",
+    main_function = "mkdocs.__main__.cli",
+    par_style = "xar",
+    py_version = "3.12",
+    deps = [
+        "fbsource//third-party/pypi/mkdocs:mkdocs",
+        "fbsource//third-party/pypi/mkdocs-material:mkdocs-material",  # @manual
+        "fbsource//third-party/pypi/mkdocstrings:mkdocstrings",  # @manual
+        "fbsource//third-party/pypi/mkdocstrings-python:mkdocstrings-python",  # @manual
+        "//data_compression/experimental/zstrong/doc/mkdocs/mkdocs-openzl/src:mkdocs_openzl",  # @manual
+        "//data_compression/experimental/zstrong/doc/mkdocs/mkdocstrings-zstd/src:mkdocstrings-zstd",  # @manual
+        "//data_compression/experimental/zstrong/py:openzl",  # @manual
+    ],
+)
+
+python_binary(
+    name = "import_mkdocstrings_zstd",
+    srcs = ["import_mkdocstrings_zstd.py"],
+    labels = ["autodeps2_generated"],
+    main_module = "data_compression.experimental.zstrong.doc.mkdocs.import_mkdocstrings_zstd",
+)

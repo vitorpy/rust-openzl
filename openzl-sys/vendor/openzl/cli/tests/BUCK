@@ -1,0 +1,203 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@fbcode_macros//build_defs:custom_unittest.bzl", "custom_unittest")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+
+oncall("data_compression")
+
+custom_unittest(
+    name = "serial_test",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+        "SerialTest.test_compress_decompress",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+custom_unittest(
+    name = "csv_train_inline_test",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+        "CsvTrainInlineTest.test_train_inline",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+custom_unittest(
+    name = "ace_train_inline_test",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+        "AceTrainInlineTest.test_train_inline",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+custom_unittest(
+    name = "csv_default_test",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+        "CsvTest.test_train_compress_decompress",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+custom_unittest(
+    name = "csv_greedy_test",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+        "CsvGreedyTest.test_train_compress_decompress",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+custom_unittest(
+    name = "csv_full_split_test",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+        "CsvFullSplitTest.test_train_compress_decompress",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+custom_unittest(
+    name = "csv_bottom_up_test",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+        "CsvBottomUpTest.test_train_compress_decompress",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+custom_unittest(
+    name = "parquet_test",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+        "ParquetTest.test_train_compress_decompress",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+custom_unittest(
+    name = "csv_alternative_separator_test",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+        "CsvAlternativeSeparatorTest.test_compress_decompress",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+custom_unittest(
+    name = "benchmark_csv_compression_test",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+        "BenchmarkCsvCompressionTest.test_benchmark",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+custom_unittest(
+    name = "all_integration_tests",
+    command = [
+        "$(location :integration_test_bin)",
+        "$(location //data_compression/experimental/zstrong/cli:zli)",
+    ],
+    type = "simple",
+    deps = [
+        ":integration_test_bin",
+        "//data_compression/experimental/zstrong/cli:zli",
+    ],
+)
+
+python_binary(
+    name = "integration_test_bin",
+    srcs = ["cli_integration_tests.py"],
+    base_module = "",
+    main_function = "cli_integration_tests.main",
+    deps = [
+        ":abstract_compression_test",
+        ":command_utils",
+    ],
+)
+
+python_library(
+    name = "abstract_compression_test",
+    srcs = ["abstract_compression_test.py"],
+    base_module = "",
+    typing = True,
+    deps = [
+        ":command_utils",
+        ":file_utils",
+    ],
+)
+
+python_library(
+    name = "command_utils",
+    srcs = ["command_utils.py"],
+    base_module = "",
+    resources = {
+        "//data_compression/experimental/zstrong/cli:zli": "bin/zli",
+    },
+    typing = True,
+    deps = [],
+)
+
+python_library(
+    name = "file_utils",
+    srcs = ["file_utils.py"],
+    base_module = "",
+    resources = glob(["sample_files/**/*"]),
+    typing = True,
+    deps = [
+    ],
+)

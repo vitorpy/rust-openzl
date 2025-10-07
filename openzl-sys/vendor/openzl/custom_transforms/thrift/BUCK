@@ -1,0 +1,51 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+# @noautodeps
+
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("//data_compression/experimental/zstrong:defs.bzl", "ZS_HEADER_INCLUDE_PATH")
+
+oncall("data_compression")
+
+cpp_library(
+    name = "thrift_lib",
+    srcs = glob([
+        "*.cpp",
+        "*.c",
+    ]),
+    headers = glob(["*.h"]),
+    compiler_flags = [
+        "-DUSE_FOLLY",
+        "-DUSE_BOOST",
+        ZS_HEADER_INCLUDE_PATH,
+        "-Werror=switch",
+    ],
+    deps = [
+        "third-party//boost:boost_sort",
+        "//folly:json",
+        "//folly/container:f14_hash",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    exported_deps = [
+        ":thrift_parse_config_schema-cpp2-types",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//folly:range",
+        "//folly:scope_guard",
+        "//folly/io:iobuf",
+    ],
+)
+
+thrift_library(
+    name = "thrift_parse_config_schema",
+    languages = [
+        "cpp2",
+        "py3-deprecated",
+        "python",
+    ],
+    py3_namespace = "zstrong.thrift",
+    thrift_srcs = {
+        "parse_config.thrift": [],
+    },
+    deps = [],
+)

@@ -1,0 +1,22 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("data_compression")
+
+cpp_library(
+    # @autodeps-skip
+    name = "json_extract",
+    srcs = [
+        "decode_json_extract.cpp",
+        "encode_json_extract.cpp",
+    ],
+    headers = [
+        "decode_json_extract.h",
+        "encode_json_extract.h",
+    ],
+    private_headers = ["common_json_extract.h"],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+    ],
+)

@@ -16,7 +16,7 @@ rust-version = "1.70"
 include = [
     "build.rs",
     "src/**/*",
-    "../vendor/openzl/**/*",
+    "vendor/**/*",
     "Cargo.toml",
 ]
 

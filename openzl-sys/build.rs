@@ -2,8 +2,7 @@ use std::{env, path::PathBuf};
 
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let root = manifest_dir.parent().expect("workspace root");
-    let vendor = root.join("vendor").join("openzl");
+    let vendor = manifest_dir.join("vendor").join("openzl");
     assert!(vendor.join("CMakeLists.txt").exists(), "vendor/openzl missing CMakeLists.txt (did you init submodules?)");
 
     // Configure and build OpenZL with CMake

@@ -1,0 +1,60 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_cxxlibrary", "zs_fuzzers", "zs_unittest")
+
+oncall("data_compression")
+
+zs_cxxlibrary(
+    name = "test_utils",
+    srcs = [
+        "test_utils.cpp",
+    ],
+    headers = [
+        "test_utils.h",
+    ],
+    compiler_flags = [
+        "-Wno-switch-enum",
+        "-Wno-shadow",
+        "-Wno-cast-qual",
+    ],
+    deps = ["fbsource//xplat/security/lionhead/utils/lib_ftest/fdp:lib"],
+    exported_deps = [
+        "fbsource//third-party/apache-arrow:arrow",
+        "//data_compression/experimental/zstrong/custom_parsers/parquet:parquet_metadata",
+        "//data_compression/experimental/zstrong/tests:fuzz_utils",
+    ],
+)
+
+zs_unittest(
+    name = "test_parquet_lexer",
+    srcs = [
+        "test_parquet_lexer.cpp",
+    ],
+    compiler_flags = [
+        "-Wno-switch-enum",
+        "-Wno-shadow",
+        "-Wno-cast-qual",
+    ],
+    deps = [
+        "fbsource//third-party/apache-arrow:arrow",
+        ":test_utils",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/custom_parsers/parquet:parquet_lexer",
+    ],
+)
+
+zs_fuzzers(
+    srcs = [
+        "fuzz_parquet_lexer.cpp",
+    ],
+    ftest_names = [
+        ("ParquetLexerTest", "FuzzLexerRandomInput"),
+        ("ParquetLexerTest", "FuzzLexerValidInput"),
+    ],
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        ":test_utils",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/custom_parsers/parquet:parquet_lexer",
+    ],
+)

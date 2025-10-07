@@ -1,0 +1,24 @@
+{
+    "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
+    "cmake.buildDirectory": "${workspaceFolder}/cmakebuild",
+    "cmake.useCMakePresets": "auto",
+    "cmake.configureArgs": [
+        "-DOPENZL_BUILD_TESTS=ON"
+    ],
+    "files.associations": {
+        "array": "cpp",
+        "string_view": "cpp",
+        "span": "cpp",
+        "vector": "cpp",
+        "*.make": "makefile"
+    },
+    "files.trimTrailingWhitespace": true,
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/compile_commands.json",
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.intelliSenseEngine": "default",
+    "C_Cpp.codeAnalysis.runAutomatically": true,
+    "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}",
+        "--header-insertion=iwyu"
+    ]
+}

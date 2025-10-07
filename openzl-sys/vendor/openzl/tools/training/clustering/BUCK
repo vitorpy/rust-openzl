@@ -1,0 +1,120 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_cxxlibrary")
+
+oncall("data_compression")
+
+zs_cxxlibrary(
+    name = "clustering_graph_trainer",
+    srcs = [
+        "clustering_graph_trainer.cpp",
+        "sample_limiter.cpp",
+    ],
+    headers = [
+        "clustering_graph_trainer.h",
+        "sample_limiter.h",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/tools:logger",
+        "//data_compression/experimental/zstrong/tools/training:train_common",
+        "//data_compression/experimental/zstrong/tools/training/clustering:train_api",
+        "//data_compression/experimental/zstrong/tools/training/graph_mutation:graph_mutation",
+        "//data_compression/experimental/zstrong/tools/training/sample_collection:sample_collection",
+        "//data_compression/experimental/zstrong/tools/training/utils:training_utils",
+    ],
+)
+
+zs_cxxlibrary(
+    name = "train_api",
+    srcs = [
+        "train_api.cpp",
+    ],
+    headers = [
+        "train_api.h",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/tools:logger",
+        "//data_compression/experimental/zstrong/tools/training:train_common",
+        "//data_compression/experimental/zstrong/tools/training/clustering:bottom_up_trainer",
+        "//data_compression/experimental/zstrong/tools/training/clustering:full_split_trainer",
+        "//data_compression/experimental/zstrong/tools/training/clustering:greedy_trainer",
+        "//data_compression/experimental/zstrong/tools/training/clustering:training_clustering",
+        "//data_compression/experimental/zstrong/tools/training/graph_mutation:graph_mutation",
+    ],
+)
+
+zs_cxxlibrary(
+    name = "full_split_trainer",
+    srcs = [
+        "trainers/full_split_trainer.cpp",
+    ],
+    headers = [
+        "trainers/full_split_trainer.h",
+        "trainers/trainer.h",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/tools/training/clustering:training_clustering",
+        "//data_compression/experimental/zstrong/tools/training/utils:training_utils",
+    ],
+)
+
+zs_cxxlibrary(
+    name = "bottom_up_trainer",
+    srcs = [
+        "trainers/bottom_up_trainer.cpp",
+    ],
+    headers = [
+        "trainers/bottom_up_trainer.h",
+        "trainers/trainer.h",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/tools/training/clustering:training_clustering",
+        "//data_compression/experimental/zstrong/tools/training/utils:training_utils",
+    ],
+)
+
+zs_cxxlibrary(
+    name = "greedy_trainer",
+    srcs = [
+        "trainers/greedy_trainer.cpp",
+    ],
+    headers = [
+        "trainers/greedy_trainer.h",
+        "trainers/trainer.h",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/tools/training/clustering:training_clustering",
+        "//data_compression/experimental/zstrong/tools/training/utils:training_utils",
+    ],
+)
+
+zs_cxxlibrary(
+    name = "training_clustering",
+    srcs = [
+        "clustering_config_builder.cpp",
+        "compression_utils.cpp",
+    ],
+    headers = [
+        "clustering_config.h",
+        "clustering_config_builder.h",
+        "compression_utils.h",
+        "utils.h",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/custom_parsers:custom_parsers",
+        "//data_compression/experimental/zstrong/tools:logger",
+        "//data_compression/experimental/zstrong/tools/training/utils:training_utils",
+    ],
+)

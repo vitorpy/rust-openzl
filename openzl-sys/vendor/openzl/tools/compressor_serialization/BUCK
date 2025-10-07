@@ -1,0 +1,14 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("data_compression")
+
+python_binary(
+    name = "to_cbor",
+    srcs = ["to_cbor.py"],
+    main_module = "data_compression.experimental.zstrong.tools.compressor_serialization.to_cbor",
+    deps = [
+        "fbsource//third-party/pypi/cbor2:cbor2",
+    ],
+)

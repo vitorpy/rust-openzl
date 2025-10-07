@@ -1,0 +1,362 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
+load("//data_compression/experimental/zstrong:defs.bzl", "zs_cxxbinary", "zs_cxxlibrary", "zs_fuzzers", "zs_library", "zs_raw_fuzzer", "zs_unittest")
+
+oncall("data_compression")
+
+# TODO(T212166954): coalesce unit tests into one binary
+zs_unittest(
+    name = "unittest",
+    srcs = glob([
+        "unittest/**/*.cpp",
+        "unittest/**/*.c",
+    ]),
+    headers = glob(["unittest/**/*.h"]),
+    supports_static_listing = False,
+    deps = [
+        ":utils",
+        "//data_compression/experimental/zstrong:common",
+        "//data_compression/experimental/zstrong/tests/datagen:datagen",
+        "//data_compression/experimental/zstrong/tools:json",
+    ],
+)
+
+zs_unittest(
+    name = "test_compress",
+    srcs = glob([
+        "compress/**/*.c",
+        "compress/**/*.cpp",
+    ]),
+    headers = glob(["compress/**/*.h"]),
+    deps = [
+        ":test_zstrong_fixtures",
+        ":utils",
+        "//data_compression/experimental/zstrong:compress",
+        "//data_compression/experimental/zstrong/tests/datagen:datagen",
+    ],
+)
+
+zs_unittest(
+    name = "test_decompress",
+    srcs = glob(["decompress/**/*.cpp"]),
+    headers = glob(["decompress/**/*.h"]),
+    deps = [
+        ":utils",
+        "//data_compression/experimental/zstrong:decompress",
+    ],
+)
+
+zs_unittest(
+    name = "integrationtest",
+    srcs = glob(
+        ["integrationtest/**/*.cpp"],
+        exclude = ["integrationtest/NoIntrospectionTest.cpp"],
+    ),
+    headers = glob(["integrationtest/**/*.h"]),
+    deps = [
+        "//data_compression/experimental/zstrong:compress",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/tests/datagen:datagen",
+    ],
+)
+
+zs_unittest(
+    name = "test_round_trip",
+    srcs = glob(["round_trip/**/*.cpp"]),
+    headers = glob(["round_trip/**/*.h"]),
+    deps = [
+        ":test_zstrong_fixtures",
+        ":utils",
+        "//data_compression/experimental/zstrong:compress",
+        "//data_compression/experimental/zstrong:decompress",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+        "//data_compression/experimental/zstrong/tests/datagen:datagen",
+    ],
+)
+
+zs_unittest(
+    name = "test_zstrong",
+    srcs = glob(["zstrong/**/test_*.cpp"]),
+    headers = glob(["zstrong/**/test_*.h"]),
+    deps = [
+        ":utils",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/tests/datagen:datagen",
+    ],
+)
+
+zs_cxxlibrary(
+    name = "test_zstrong_fixtures",
+    srcs = glob(["zstrong/**/*ixture.cpp"]),
+    headers = glob(["zstrong/**/*ixture.h"]),
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        ":utils",
+        "//data_compression/experimental/zstrong:zstronglib",
+    ],
+)
+
+zs_unittest(
+    name = "test_codecs",
+    srcs = glob(["codecs/**/test_*.cpp"]),
+    headers = glob(["codecs/**/test_*.h"]),
+    deps = [
+        ":utils",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/tests/datagen:datagen",
+        "//data_compression/experimental/zstrong/tools/sddl/compiler:lib",
+    ],
+)
+
+zs_cxxlibrary(
+    name = "constants",
+    headers = ["constants.h"],
+)
+
+zs_cxxlibrary(
+    name = "utils",
+    srcs = [
+        "local_params_utils.cpp",
+        "utils.cpp",
+    ],
+    headers = [
+        "local_params_utils.h",
+        "utils.h",
+    ],
+    exported_deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/cpp:openzl_cpp",
+    ],
+)
+
+zs_cxxbinary(
+    name = "round_trip",
+    srcs = ["round_trip.cpp"],
+    deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/tools:fileio",
+        "//folly/init:init",
+    ],
+)
+
+zs_cxxbinary(
+    name = "benchmark_bitstream",
+    srcs = ["unittest/common/test_bitstream.cpp"],
+    compiler_flags = [
+        "-mbmi2",
+        "-DBENCHMARK_BITSTREAM",
+    ],
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        ":utils",
+        "//data_compression/experimental/zstrong:common",
+    ],
+)
+
+zs_library(
+    name = "selector_optimization",
+    srcs = [
+        "zs2_selector_optimization.c",
+    ],
+    headers = [
+        "zs2_selector_optimization.h",
+    ],
+    exported_deps = [
+        "//data_compression/experimental/zstrong:zstronglib",
+        "//data_compression/experimental/zstrong/tools:timefn",
+    ],
+)
+
+zs_cxxlibrary(
+    name = "fuzz_utils",
+    headers = ["fuzz_utils.h"],
+    exported_deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest/fdp:lib",
+        "//data_compression/experimental/zstrong/tests/datagen:datagen",
+    ],
+)
+
+FUZZER_DEPS = [
+    "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+    ":constants",
+    ":fuzz_utils",
+    ":test_zstrong_fixtures",
+    "//data_compression/experimental/zstrong:zstronglib",
+    "//data_compression/experimental/zstrong/tests/datagen:datagen",
+]
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_fixed.cpp",
+    ],
+    ftest_names = [
+        ("FixedTest", "FuzzInterpretTokenAsLEIntRoundTrip"),
+        ("FixedTest", "FuzzConvertTokenToSerialRoundTrip"),
+        ("FixedTest", "FuzzHuffRoundtrip"),
+        ("FixedTest", "FuzzFieldLzRoundTrip"),
+        ("FixedTest", "FuzzFieldLzFNodeRoundTrip"),
+        ("FixedTest", "FuzzTransposeRoundTrip"),
+        ("FixedTest", "FuzzTransposeSplitRoundTrip"),
+        ("FixedTest", "FuzzTransposeVORoundTrip"),
+        ("FixedTest", "FuzzZstdFixedRoundTrip"),
+        ("FixedTest", "FuzzTokenizeRoundTrip"),
+        ("FixedTest", "FuzzConstantRoundTrip"),
+        ("FixedTest", "FuzzSplitNRoundTrip"),
+        ("FixedTest", "FuzzFieldLzFNodeRoundTripWithOverrideLevels"),
+        ("FixedTest", "FuzzZstdRoundTripWithOverrideLevels"),
+    ],
+    deps = FUZZER_DEPS,
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_integer.cpp",
+    ],
+    ftest_names = [
+        ("IntegerTest", "FuzzConvertIntToTokenRoundTrip"),
+        ("IntegerTest", "FuzzConvertIntToSerialRoundTrip"),
+        ("IntegerTest", "FuzzQuantizeOffsetsRoundTrip"),
+        ("IntegerTest", "FuzzQuantizeLengthsRoundTrip"),
+        ("IntegerTest", "FuzzDeltaRoundTrip"),
+        ("IntegerTest", "FuzzBitpackRoundTrip"),
+        ("IntegerTest", "FuzzRangePackRoundTrip"),
+        ("IntegerTest", "FuzzMergeSortedRoundTrip"),
+        ("IntegerTest", "FuzzSplitNRoundTrip"),
+        ("IntegerTest", "FuzzFSENCountRoundTrip"),
+        ("IntegerTest", "FuzzIntegerSelector"),
+        ("IntegerTest", "FuzzIntegerDivideBy"),
+    ],
+    deps = FUZZER_DEPS,
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_large.cpp",
+    ],
+    ftest_names = [
+        ("LargeInputTest", "FuzzSerialTransform"),
+        ("LargeInputTest", "FuzzSerialGraph"),
+    ],
+    deps = FUZZER_DEPS + [
+        "//data_compression/experimental/zstrong/tests/datagen:custom_nodes",
+    ],
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_serialized.cpp",
+    ],
+    ftest_names = [
+        ("SerializedTest", "FuzzInterpretSerializedAsLEIntRoundTrip"),
+        ("SerializedTest", "FuzzConvertSerialToTokenRoundTrip"),
+        ("SerializedTest", "FuzzHuffmanRoundTrip"),
+        ("SerializedTest", "FuzzFSERoundTrip"),
+        ("SerializedTest", "FuzzZstdRoundTrip"),
+        ("SerializedTest", "FuzzBitpackRoundTrip"),
+        ("SerializedTest", "FuzzFlatpackRoundTrip"),
+        ("SerializedTest", "FuzzBitunpackRoundTrip"),
+        ("SerializedTest", "FuzzSplitByStructRoundTrip"),
+        ("SerializedTest", "FuzzSplitNRoundTrip"),
+        ("SerializedTest", "FuzzDispatchNByTagRoundTrip"),
+        ("SerializedTest", "FuzzSetStringSizesRoundTrip"),
+        ("SerializedTest", "FuzzConstantRoundTrip"),
+    ],
+    deps = FUZZER_DEPS,
+)
+
+# TODO(terrelln): Replace this with a fuzzer that uses a generator,
+# which has proven more effective.
+zs_raw_fuzzer(
+    name = "Zstrong_DecompressTest_FuzzDecompress",
+    srcs = [
+        "zstrong/fuzz_decompress.cpp",
+    ],
+    deps = FUZZER_DEPS,
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_variable.cpp",
+    ],
+    ftest_names = [
+        ("VariableTest", "FuzzPrefixRoundTrip"),
+        ("VariableTest", "FuzzTokenizeRoundTrip"),
+        ("VariableTest", "FuzzTokenizeSortedRoundTrip"),
+        ("VariableTest", "FuzzDispatchStringRoundTrip"),
+        ("VariableTest", "FuzzParseIntRoundTrip"),
+        ("VariableTest", "FuzzParseIntSafeRoundTrip"),
+    ],
+    deps = FUZZER_DEPS,
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_multi_input.cpp",
+    ],
+    ftest_names = [
+        ("MultiInputTest", "FuzzConcatRoundTrip"),
+        ("MultiInputTest", "FuzzClusterRoundTrip"),
+    ],
+    deps = FUZZER_DEPS,
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_decompress_reuse.cpp",
+    ],
+    ftest_names = [
+        ("DecompressTest", "ReuseDCtx"),
+    ],
+    deps = FUZZER_DEPS,
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_compress_reuse.cpp",
+    ],
+    ftest_names = [
+        ("CompressTest", "ReuseCCtx"),
+    ],
+    deps = FUZZER_DEPS,
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_graph.cpp",
+    ],
+    ftest_names = [
+        ("GraphTest", "FuzzGraphRoundTrip"),
+    ],
+    deps = FUZZER_DEPS,
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_alloc_failure.cpp",
+    ],
+    ftest_names = [
+        ("AllocFailureTest", "FuzzAllocFailure"),
+    ],
+    deps = FUZZER_DEPS,
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/fuzz_sort.cpp",
+    ],
+    ftest_names = [
+        ("SortTest", "FuzzPDQsort"),
+    ],
+    deps = FUZZER_DEPS,
+)
+
+zs_fuzzers(
+    srcs = [
+        "zstrong/InterleaveFuzzer.cpp",
+    ],
+    ftest_names = [
+        ("InterleaveTest", "FuzzInterleaveRoundTrip"),
+    ],
+    deps = FUZZER_DEPS,
+)
