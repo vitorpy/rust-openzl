@@ -1,0 +1,3 @@
+[submodule "openzl"]
+	path = vendor/openzl
+	url = ../openzl

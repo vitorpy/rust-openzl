@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = [
+  "openzl-sys",
+  "openzl",
+]
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/example/rust-openzl"
+readme = "README.md"
+
+[workspace.dependencies]
+libc = "0.2"
+thiserror = "1"

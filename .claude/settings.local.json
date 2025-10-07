@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git submodule:*)",
+      "Bash(cargo build:*)",
+      "Bash(VERBOSE=1 cargo build -p openzl-sys)",
+      "Bash(cargo clean:*)",
+      "Bash(nm:*)",
+      "Bash(cargo test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
