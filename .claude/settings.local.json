@@ -12,7 +12,8 @@
       "Bash(git commit:*)",
       "Bash(cargo run:*)",
       "Bash(cargo doc:*)",
-      "Bash(cargo publish:*)"
+      "Bash(cargo publish:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
