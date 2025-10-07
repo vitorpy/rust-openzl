@@ -13,6 +13,12 @@ documentation = "https://docs.rs/openzl-sys"
 keywords = ["compression", "openzl", "ffi", "bindings"]
 categories = ["compression", "external-ffi-bindings"]
 rust-version = "1.70"
+include = [
+    "build.rs",
+    "src/**/*",
+    "../vendor/openzl/**/*",
+    "Cargo.toml",
+]
 
 [build-dependencies]
 cmake = "0.1"
