@@ -50,10 +50,12 @@ impl GraphId {
         unsafe { sys::ZL_GraphID_isValid(self.0) != 0 }
     }
 
+    #[allow(dead_code)] // Used for custom graph registration (Step 12)
     pub(crate) fn as_raw(&self) -> sys::ZL_GraphID {
         self.0
     }
 
+    #[allow(dead_code)] // Used for custom graph registration (Step 12)
     pub(crate) fn from_raw(id: sys::ZL_GraphID) -> Self {
         GraphId(id)
     }
@@ -222,25 +224,12 @@ impl GraphFn for FieldLzGraph {
     }
 }
 
-// C trampoline for converting Rust GraphFn to C callback
-unsafe extern "C" fn graph_fn_trampoline(compressor: *mut sys::ZL_Compressor) -> sys::ZL_GraphID {
-    // This is called from C code during compression.
-    // We need to recover the GraphFn trait object from somewhere.
-    // For now, we'll use a simple approach: the trait object is passed via
-    // thread-local storage or as user data.
-    //
-    // Actually, looking at the C API more carefully, ZL_compress_usingGraphFn
-    // takes a raw function pointer, not a closure with context.
-    // We need to use a different approach: create a wrapper that stores
-    // the graph function and provides a C-compatible callback.
-
-    // For the stateless API (standard graphs), we can just return the GraphID directly.
-    // But we need to know which graph to use. This won't work with trait objects.
-
-    // Better approach: for each standard graph, create a dedicated C callback.
-    // For custom graphs, we'll need a different mechanism.
-
-    // This is a placeholder - we'll implement dedicated trampolines for each standard graph
+// Placeholder trampoline for custom graph functions (used in Step 12)
+#[allow(dead_code)]
+unsafe extern "C" fn graph_fn_trampoline(_compressor: *mut sys::ZL_Compressor) -> sys::ZL_GraphID {
+    // This is a placeholder for custom graph registration (Step 12).
+    // For now, standard graphs use dedicated callbacks below.
+    // Custom graphs will require thread-local storage or user data passing.
     graphs::ZSTD.0
 }
 
@@ -864,4 +853,115 @@ pub fn decompress_typed_buffer(compressed: &[u8]) -> Result<TypedBuffer, Error> 
     let mut output = TypedBuffer::new();
     dctx.decompress_typed_buffer(compressed, &mut output)?;
     Ok(output)
+}
+
+// ============================================================================
+// High-level ergonomic APIs (Step 9 - MVP completion)
+// ============================================================================
+
+/// Compress numeric data using the NUMERIC graph (optimized for numeric arrays).
+///
+/// Supports all numeric types: u8, u16, u32, u64, i8, i16, i32, i64, f32, f64.
+///
+/// # Example
+/// ```no_run
+/// # use openzl::compress_numeric;
+/// let data: Vec<u32> = (0..10000).collect();
+/// let compressed = compress_numeric(&data).expect("compression failed");
+/// ```
+pub fn compress_numeric<T: Copy>(data: &[T]) -> Result<Vec<u8>, Error> {
+    // Validate that T is a supported numeric type (1, 2, 4, or 8 bytes)
+    let width = std::mem::size_of::<T>();
+    if !matches!(width, 1 | 2 | 4 | 8) {
+        return Err(Error::Report {
+            code: -1,
+            name: "Invalid numeric type".into(),
+            context: format!("\nElement size must be 1, 2, 4, or 8 bytes, got {width}"),
+        });
+    }
+
+    // Create TypedRef for numeric data
+    let tref = TypedRef::numeric(data)?;
+
+    // Create CCtx and Compressor with NUMERIC graph
+    let mut cctx = CCtx::new();
+    cctx.set_parameter(sys::ZL_CParam::ZL_CParam_formatVersion, 21)?;
+
+    let mut compressor = Compressor::new();
+    compressor.set_parameter(sys::ZL_CParam::ZL_CParam_formatVersion, 21)?;
+
+    // Initialize with NUMERIC graph
+    let r = unsafe {
+        sys::ZL_Compressor_initUsingGraphFn(compressor.as_mut_ptr(), Some(numeric_graph_callback))
+    };
+    if sys::report_is_error(r) {
+        return Err(report_to_error(r));
+    }
+
+    cctx.ref_compressor(&compressor)?;
+
+    // Compress
+    let cap = compress_bound(data.len() * width);
+    let mut dst = vec![0u8; cap];
+
+    let n = cctx.compress_typed_ref(&tref, &mut dst)?;
+    dst.truncate(n);
+    Ok(dst)
+}
+
+/// Decompress numeric data that was compressed with `compress_numeric`.
+///
+/// Returns a Vec<T> containing the decompressed numeric values.
+///
+/// # Example
+/// ```no_run
+/// # use openzl::{compress_numeric, decompress_numeric};
+/// let data: Vec<u32> = (0..10000).collect();
+/// let compressed = compress_numeric(&data).expect("compression failed");
+/// let decompressed: Vec<u32> = decompress_numeric(&compressed).expect("decompression failed");
+/// assert_eq!(data, decompressed);
+/// ```
+pub fn decompress_numeric<T: Copy>(compressed: &[u8]) -> Result<Vec<T>, Error> {
+    let width = std::mem::size_of::<T>();
+    if !matches!(width, 1 | 2 | 4 | 8) {
+        return Err(Error::Report {
+            code: -1,
+            name: "Invalid numeric type".into(),
+            context: format!("\nElement size must be 1, 2, 4, or 8 bytes, got {width}"),
+        });
+    }
+
+    // Decompress into TypedBuffer
+    let tbuf = decompress_typed_buffer(compressed)?;
+
+    // Verify it's numeric type
+    if tbuf.data_type() != sys::ZL_Type::ZL_Type_numeric {
+        return Err(Error::Report {
+            code: -1,
+            name: "Type mismatch".into(),
+            context: format!("\nExpected numeric type, got {:?}", tbuf.data_type()),
+        });
+    }
+
+    // Verify element width matches T
+    if tbuf.elt_width() != width {
+        return Err(Error::Report {
+            code: -1,
+            name: "Width mismatch".into(),
+            context: format!(
+                "\nExpected element width {}, got {}",
+                width,
+                tbuf.elt_width()
+            ),
+        });
+    }
+
+    // Extract numeric data
+    let slice = tbuf.as_numeric::<T>().ok_or_else(|| Error::Report {
+        code: -1,
+        name: "Failed to extract numeric data".into(),
+        context: "\nAlignment or type mismatch".into(),
+    })?;
+
+    Ok(slice.to_vec())
 }

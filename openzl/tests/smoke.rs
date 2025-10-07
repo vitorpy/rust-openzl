@@ -3,7 +3,7 @@
 use openzl::{
     compress_serial, decompress_serial,
     compress_typed_ref, decompress_typed_buffer,
-    compress_with_graph,
+    compress_with_graph, compress_numeric, decompress_numeric,
     TypedRef, ZstdGraph, NumericGraph, StoreGraph,
 };
 
@@ -153,4 +153,61 @@ fn graph_store_roundtrip() {
 
     let decompressed = decompress_serial(&compressed).expect("decompress");
     assert_eq!(src, decompressed.as_slice());
+}
+
+// ============================================================================
+// High-level ergonomic APIs (Step 9)
+// ============================================================================
+
+#[test]
+fn compress_numeric_u32_roundtrip() {
+    let data: Vec<u32> = (0..1000).collect();
+    let compressed = compress_numeric(&data).expect("compress numeric u32");
+    let decompressed: Vec<u32> = decompress_numeric(&compressed).expect("decompress numeric u32");
+    assert_eq!(data, decompressed);
+}
+
+#[test]
+fn compress_numeric_u64_roundtrip() {
+    let data: Vec<u64> = (0..500).map(|i| i * 1000).collect();
+    let compressed = compress_numeric(&data).expect("compress numeric u64");
+
+    // Should compress well due to numeric patterns
+    println!("u64 data size: {} bytes, compressed: {} bytes",
+             data.len() * 8, compressed.len());
+
+    let decompressed: Vec<u64> = decompress_numeric(&compressed).expect("decompress numeric u64");
+    assert_eq!(data, decompressed);
+}
+
+#[test]
+fn compress_numeric_u16_roundtrip() {
+    let data: Vec<u16> = (0..2000).map(|i| (i % 1000) as u16).collect();
+    let compressed = compress_numeric(&data).expect("compress numeric u16");
+    let decompressed: Vec<u16> = decompress_numeric(&compressed).expect("decompress numeric u16");
+    assert_eq!(data, decompressed);
+}
+
+#[test]
+fn compress_numeric_i32_roundtrip() {
+    let data: Vec<i32> = (-500..500).collect();
+    let compressed = compress_numeric(&data).expect("compress numeric i32");
+    let decompressed: Vec<i32> = decompress_numeric(&compressed).expect("decompress numeric i32");
+    assert_eq!(data, decompressed);
+}
+
+#[test]
+fn compress_numeric_f32_roundtrip() {
+    let data: Vec<f32> = (0..100).map(|i| i as f32 * 1.5).collect();
+    let compressed = compress_numeric(&data).expect("compress numeric f32");
+    let decompressed: Vec<f32> = decompress_numeric(&compressed).expect("decompress numeric f32");
+    assert_eq!(data, decompressed);
+}
+
+#[test]
+fn compress_numeric_f64_roundtrip() {
+    let data: Vec<f64> = (0..100).map(|i| i as f64 * 2.718281828).collect();
+    let compressed = compress_numeric(&data).expect("compress numeric f64");
+    let decompressed: Vec<f64> = decompress_numeric(&compressed).expect("decompress numeric f64");
+    assert_eq!(data, decompressed);
 }
